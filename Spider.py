@@ -2,16 +2,25 @@ import requests
 import random
 import string
 import os
+import logging
+import click
 
 from bs4 import BeautifulSoup
 
-readme_save_local_address = "/Users/qinhaojun/Desktop/testSpi"
-source_user = "Bolvvv"
+base_url = "/Users/qinhaojun/Desktop"
 
-#生成随机文件名称
-def generate_file_name():
-    salt = ''.join(random.sample(string.ascii_letters + string.digits, 6))
-    return salt
+readme_save_local_address = base_url+"/readme_file"
+name_list_file = base_url+"/log/name_list.txt"
+log_file_name = base_url+"/log/log.log"
+
+
+#日志配置
+logging.basicConfig(
+        level=logging.DEBUG,  # 定义输出到文件的log级别，大于此级别的都被输出
+        format='%(asctime)s  %(filename)s : %(levelname)s  %(message)s',  # 定义输出log的格式
+        datefmt='%Y-%m-%d %A %H:%M:%S',  # 时间
+        filename=log_file_name,  # log文件名
+        filemode='w+')  # 写入模式“w”或“a”
 
 #返回对应仓库的json字段
 def download_readme(link):
@@ -21,7 +30,7 @@ def download_readme(link):
     if urlpage.status_code != 200:
         return None
     else:
-        save_address = readme_save_local_address+"/"+generate_file_name()+".md"
+        save_address = readme_save_local_address+"/"+link.strip('/').replace('/','_')+".md"
         ff = open(save_address,'w')
         ff.writelines(urlpage.text)
         ff.close()
@@ -41,6 +50,7 @@ def generate_repositories_info(respositories_list):
         temp_json['link'] = i.a['href']
         temp_json['readme_local_address'] = download_readme(i.a['href'])
         respositories_json.append(temp_json)
+        logging.debug(temp_json['link'])
     return respositories_json
 
 #获取用户仓库信息
@@ -71,6 +81,7 @@ def get_repositories_info(user_name):
                 next_page_button_flag = False
             else:
                 repositories_url = next_button["href"]
+    return final_json
 
 # 获取用户关注列表与被关注列表
 def get_user_follow(user_name):
@@ -88,7 +99,7 @@ def get_user_follow(user_name):
             break
         #获取当页关注列表
         for i in list_a:
-            final_json.append(i['href'])
+            final_json.append(i['href'].strip('/'))
         #判断是否有下一页按钮
         button_nav = follow_list.find('div', class_ = "pagination")
         if button_nav == None:
@@ -102,7 +113,49 @@ def get_user_follow(user_name):
                 following_url = next_button['href']
     return final_json
 
+# 赋值
+@click.command()
+@click.option('--retry', is_flag=True)#设置retry参数，当命令行不设置retry参数时，retry==fales,不进行重试操作
+def spider(retry):
+    number = 2000
+    save_json = []
+    name_list = ["Bolvvv"]
+    stop_flag = False
+    name_set = set()
+    temp_list = []
+    index = 0
+    if retry == True:
+        name_set_file = open(name_list_file, 'r')
+        s = name_set_file.readlines()
+        for i in s:
+            name_set.add(i.replace('\n',''))
+        name_set_file.close()
+    print(name_set)
+    try:
+        while stop_flag==False:
+            for index in range(len(name_list)):
+                if len(save_json) > number:
+                    stop_flag=True
+                    break
+                #获取当前用户的关注列表，并将其加入临时关注列表中
+                #TODO:由于逻辑问题，此处会造成无限增加重复的关注列表
+                temp_list = temp_list + get_user_follow(name_list[index])
+                if name_list[index] in name_set:
+                    continue
+                else:
+                    name_set.add(name_list[index])
+                    save_json = save_json + get_repositories_info(name_list[index])
+                if index == len(name_list)-1:
+                    index = 0
+                    name_list = temp_list[:]
+                    temp_list.clear()
+    except:
+        logging.debug("网络出现问题")
+        ff = open(name_list_file,'w+')
+        for i in name_set:
+            ff.writelines(i)
+            ff.writelines('\n')
+        ff.close()
 
-print(len(get_user_follow("Bolvvv")))
-
-
+if __name__ == "__main__":
+    spider()
