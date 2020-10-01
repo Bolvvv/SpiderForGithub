@@ -7,11 +7,9 @@ import click
 
 from bs4 import BeautifulSoup
 
-base_url = "/Users/qinhaojun/Desktop"
-
-readme_save_local_address = base_url+"/readme_file"
-name_list_file = base_url+"/log/name_list.txt"
-log_file_name = base_url+"/log/log.log"
+readme_save_local_address = "./readme_file"
+name_list_file = "./log/name_list.txt"
+log_file_name = "./log/log.log"
 
 
 #日志配置
@@ -130,7 +128,6 @@ def spider(retry):
         for i in s:
             name_set.add(i.replace('\n',''))
         name_set_file.close()
-    print(name_set)
     try:
         while stop_flag==False:
             for index in range(len(name_list)):
@@ -138,17 +135,16 @@ def spider(retry):
                     stop_flag=True
                     break
                 #获取当前用户的关注列表，并将其加入临时关注列表中
-                #TODO:由于逻辑问题，此处会造成无限增加重复的关注列表
                 temp_list = temp_list + get_user_follow(name_list[index])
+                if index == len(name_list)-1:
+                    index = 0
+                    name_list = temp_list[:]
+                    temp_list.clear()
                 if name_list[index] in name_set:
                     continue
                 else:
                     name_set.add(name_list[index])
                     save_json = save_json + get_repositories_info(name_list[index])
-                if index == len(name_list)-1:
-                    index = 0
-                    name_list = temp_list[:]
-                    temp_list.clear()
     except:
         logging.debug("网络出现问题")
         ff = open(name_list_file,'w+')
