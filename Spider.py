@@ -111,18 +111,13 @@ def get_user_follow(user_name):
                 following_url = next_button['href']
     return final_json
 
-# 赋值
 @click.command()
 @click.option('--retry', '-r', is_flag=True, help="接着上一次报错的地方继续爬取数据")#设置retry参数，当命令行不设置retry参数时，retry==fales,不进行重试操作
 @click.option('--source_name', '-sn', required=True, help="设置源用户名")
 def spider(retry, source_name):
     number = 2000
-    save_json = []
     name_list = [source_name]
-    stop_flag = False
     name_set = set()
-    temp_list = []
-    index = 0
     if retry == True:
         name_set_file = open(name_list_file, 'r')
         s = name_set_file.readlines()
@@ -130,29 +125,30 @@ def spider(retry, source_name):
             name_set.add(i.replace('\n',''))
         name_set_file.close()
     try:
+        save_json = []
+        stop_flag = False
+        temp_list = []
+        index = 0
         while stop_flag==False:
             for index in range(len(name_list)):
                 if len(save_json) > number:
                     stop_flag=True
                     break
-                #获取当前用户的关注列表，并将其加入临时关注列表中
+                if name_list[index] not in name_set:
+                    name_set.add(name_list[index])
+                    save_json = save_json + get_repositories_info(name_list[index])
                 temp_list = temp_list + get_user_follow(name_list[index])
                 if index == len(name_list)-1:
                     index = 0
                     name_list = temp_list[:]
                     temp_list.clear()
-                if name_list[index] in name_set:
-                    continue
-                else:
-                    name_set.add(name_list[index])
-                    save_json = save_json + get_repositories_info(name_list[index])
     except:
         logging.debug("网络出现问题")
-        ff = open(name_list_file,'w+')
+        nl = open(name_list_file,'w+')
         for i in name_set:
-            ff.writelines(i)
-            ff.writelines('\n')
-        ff.close()
+            nl.writelines(i)
+            nl.writelines('\n')
+        nl.close()
 
 if __name__ == "__main__":
     spider()
