@@ -113,11 +113,12 @@ def get_user_follow(user_name):
 
 # 赋值
 @click.command()
-@click.option('--retry', is_flag=True)#设置retry参数，当命令行不设置retry参数时，retry==fales,不进行重试操作
-def spider(retry):
+@click.option('--retry', '-r', is_flag=True, help="接着上一次报错的地方继续爬取数据")#设置retry参数，当命令行不设置retry参数时，retry==fales,不进行重试操作
+@click.option('--source_name', '-sn', required=True, help="设置源用户名")
+def spider(retry, source_name):
     number = 2000
     save_json = []
-    name_list = ["Bolvvv"]
+    name_list = [source_name]
     stop_flag = False
     name_set = set()
     temp_list = []
