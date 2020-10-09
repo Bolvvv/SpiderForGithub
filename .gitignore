@@ -136,3 +136,4 @@ readme_file/*
 !.gitkeep
 
 json_file.txt
+nohup.out
