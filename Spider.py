@@ -4,7 +4,8 @@ import string
 import os
 import logging
 import click
-import pymongo
+import json
+# import pymongo
 
 from bs4 import BeautifulSoup
 
@@ -12,9 +13,9 @@ readme_save_local_address = "./readme_file"
 name_list_file = "./log/name_list.txt"
 log_file_name = "./log/log.log"
 
-mongo_client = pymongo.MongoClient(host='localhost', port=27017)
-mongo_db = mongo_client["bolvvv"]
-collection = mongo_db['test_spi']
+# mongo_client = pymongo.MongoClient(host='localhost', port=27017)
+# mongo_db = mongo_client["bolvvv"]
+# collection = mongo_db['test_spi']
 
 #日志配置
 logging.basicConfig(
@@ -52,7 +53,7 @@ def generate_repositories_info(respositories_list):
         temp_json['link'] = i.a['href']
         temp_json['readme_local_address'] = download_readme(i.a['href'])
         respositories_json.append(temp_json)
-        collection.insert_one(temp_json)#插入数据进mongodb
+        # collection.insert_one(temp_json)#插入数据进mongodb
         logging.debug(temp_json['link'])
     return respositories_json
 
@@ -121,7 +122,7 @@ def get_user_follow(user_name):
 @click.option('--source_name', '-sn', required=True, help="设置源用户名")
 @click.option('--spider_number', '-n', required=True, help="爬取数量")
 def spider(retry, source_name, spider_number):
-    number = spider_number
+    number = int(spider_number)
     name_list = [source_name]
     name_set = set()
     if retry == True:
@@ -148,6 +149,10 @@ def spider(retry, source_name, spider_number):
                     index = 0
                     name_list = temp_list[:]
                     temp_list.clear()
+        json_file = open('json_file.txt', 'w+')
+        json_file.writelines(json.dumps(save_json, indent=4))
+        json_file.close()
+        logging.debug("执行完毕")
     except:
         logging.debug("网络出现问题")
         nl = open(name_list_file,'w+')
